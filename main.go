@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -17,9 +18,10 @@ type problem struct {
 func main() {
 	csvFileName := flag.String("csv", "problems.csv",
 		"a csv file in the format of 'question, answer'")
-	flag.Parse()
 
-	timeLimit := flag.Int("limit", 30, "The time limit for the quiz in seconds")
+	timeLimit := flag.Int("limit", 30, "The time limit for the quiz in seconds.")
+
+	shuffle := flag.Bool("shuffle", false, "True or False to shuffle the problems.")
 	flag.Parse()
 
 	file, err := os.Open(*csvFileName)
@@ -34,6 +36,10 @@ func main() {
 	}
 
 	problems := parseLines(lines)
+
+	if shuffle != nil && *shuffle {
+		Shuffle(problems)
+	}
 
 	timer := time.NewTimer(time.Duration(*timeLimit) * time.Second)
 
@@ -57,7 +63,7 @@ problemLoop:
 			fmt.Println()
 			break problemLoop
 		case answer := <-answerCh:
-			if answer == p.a {
+			if strings.ToLower(answer) == strings.ToLower(p.a) {
 				fmt.Println("Correct!")
 				correct++
 			}
@@ -75,6 +81,21 @@ func parseLines(lines [][]string) []problem {
 		}
 	}
 	return ret
+}
+
+/*
+Even when we pass the slice by value. The underlying array gets modified. Search "why are slices sometimes altered
+when passed by value in go".
+*/
+func Shuffle(problems []problem) {
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	for len(problems) > 0 {
+		n := len(problems)
+		randIndex := r.Intn(n)
+		problems[n-1], problems[randIndex] = problems[randIndex], problems[n-1]
+		problems = problems[:n-1]
+	}
+	fmt.Println(problems)
 }
 
 func exit(msg string) {
